@@ -1,0 +1,71 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install packages
+        run: npm install
+
+      - name: List the songs in www/songs
+        run: node scripts/make-manifest.js
+
+      - name: Create the Android project
+        run: npx cap add android
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Draw the app icon and splash screen
+        run: |
+          pip install pillow
+          python scripts/make-icons.py
+
+      - name: Make the Android icon sizes
+        run: npx capacitor-assets generate --android
+
+      - name: Lock to portrait
+        run: sed -i 's/<activity /<activity android:screenOrientation="portrait" /' android/app/src/main/AndroidManifest.xml
+
+      - name: Copy the web app in
+        run: npx cap sync android
+
+      - name: Build the APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Name the APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Particles-HP.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Particles-HP.apk
+          path: Particles-HP.apk
+
+      - name: Publish a download link
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Particles HP build ${{ github.run_number }}
+          files: Particles-HP.apk
