@@ -1,0 +1,9 @@
+{
+  "appId": "com.particleheart.app",
+  "appName": "Particles HP",
+  "webDir": "www",
+  "backgroundColor": "#05060a",
+  "android": {
+    "adjustMarginsForEdgeToEdge": "auto"
+  }
+}
